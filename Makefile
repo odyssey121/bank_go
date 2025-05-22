@@ -7,5 +7,8 @@ migratedown:
 clear:
 	clear
 
+test:
+	go test -v -cover ./...
+
 # not file in dir
-.PHONY: clear migrateup migratedown
+.PHONY: clear migrateup migratedown test
