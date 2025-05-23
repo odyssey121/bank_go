@@ -8,12 +8,50 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestStoreTransferTxDeadlock(t *testing.T) {
+	store := NewStore(testDb)
+
+	acc1 := createRandomAccount(t)
+	acc2 := createRandomAccount(t)
+	fmt.Println("BEFORE >> ", acc1.Balance, acc2.Balance)
+
+	amount := int64(10)
+	errors := make(chan error)
+	n := 10
+
+	for i := 0; i < n; i++ {
+		fromAccID := acc1.ID
+		toAccID := acc2.ID
+		if i%2 == 1 {
+			fromAccID = acc2.ID
+			toAccID = acc1.ID
+		}
+
+		go func() {
+			_, err := store.TransferTx(context.Background(), TransferTxParam{FromAccountID: fromAccID, ToAccountID: toAccID, Amount: amount})
+			errors <- err
+		}()
+	}
+
+	for i := 0; i < n; i++ {
+		err := <-errors
+		require.NoError(t, err)
+	}
+
+	updatedAccount1, _ := store.GetAccount(context.Background(), acc1.ID)
+	updatedAccount2, _ := store.GetAccount(context.Background(), acc2.ID)
+	fmt.Println("AFTER >> ", updatedAccount1.Balance, updatedAccount2.Balance)
+	require.Equal(t, acc1.Balance, updatedAccount1.Balance)
+	require.Equal(t, acc2.Balance, updatedAccount2.Balance)
+
+}
+
 func TestStoreTransferTx(t *testing.T) {
 	store := NewStore(testDb)
 
 	accFromBeforeTx := createRandomAccount(t)
 	accToBeforeTx := createRandomAccount(t)
-	fmt.Println("BEFORE >> ", accFromBeforeTx.Balance, accToBeforeTx.Balance)
+	// fmt.Println("BEFORE >> ", accFromBeforeTx.Balance, accToBeforeTx.Balance)
 
 	amount := int64(10)
 	n := 5
@@ -59,7 +97,7 @@ func TestStoreTransferTx(t *testing.T) {
 		// check accounts
 		accFrom := res.FromAccount
 		accTo := res.ToAccount
-		fmt.Println("tx >>", accFrom.Balance, accTo.Balance)
+		// fmt.Println("tx >>", accFrom.Balance, accTo.Balance)
 		require.NoError(t, err)
 		require.NotEmpty(t, accFrom)
 		require.Equal(t, accFromBeforeTx.ID, accFrom.ID)
