@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -12,16 +13,19 @@ func TestStoreTransferTx(t *testing.T) {
 
 	accFromBeforeTx := createRandomAccount(t)
 	accToBeforeTx := createRandomAccount(t)
+	fmt.Println("BEFORE >> ", accFromBeforeTx.Balance, accToBeforeTx.Balance)
 
 	amount := int64(10)
-	n := 4
+	n := 5
 
 	errs := make(chan error)
 	results := make(chan TransferTxResult)
 
 	for i := 0; i < n; i++ {
+		txName := fmt.Sprintf("tx >> %d", i+1)
+		ctx := context.WithValue(context.Background(), txKey, txName)
 		go func() {
-			res, err := store.TransferTx(context.Background(), TransferTxParam{FromAccountID: accFromBeforeTx.ID, ToAccountID: accToBeforeTx.ID, Amount: amount})
+			res, err := store.TransferTx(ctx, TransferTxParam{FromAccountID: accFromBeforeTx.ID, ToAccountID: accToBeforeTx.ID, Amount: amount})
 			errs <- err
 			results <- res
 
@@ -52,22 +56,30 @@ func TestStoreTransferTx(t *testing.T) {
 		require.NotEmpty(t, toEntry)
 		require.Equal(t, toEntry.AccountID, res.ToEntry.AccountID)
 		require.Equal(t, toEntry.Amount, res.ToEntry.Amount)
-		// check accounts balance
-		accFrom, err := store.GetAccount(context.Background(), res.Transfer.FromAccountID)
+		// check accounts
+		accFrom := res.FromAccount
+		accTo := res.ToAccount
+		fmt.Println("tx >>", accFrom.Balance, accTo.Balance)
 		require.NoError(t, err)
 		require.NotEmpty(t, accFrom)
-		// require.Equal(t, accFromBeforeTx.Balance, accFrom.Balance+amount)
-		accTo, err := store.GetAccount(context.Background(), res.Transfer.ToAccountID)
+		require.Equal(t, accFromBeforeTx.ID, accFrom.ID)
+
 		require.NoError(t, err)
 		require.NotEmpty(t, accTo)
-		// require.Equal(t, accFromBeforeTx.Balance, accFrom.Balance-amount)
-
-		diffBalanceFrom := accFromBeforeTx.Balance - accFrom.Balance
-		diffBalanceTo := accTo.Balance - accToBeforeTx.Balance
-		require.Equal(t, diffBalanceFrom, diffBalanceTo)
-
-		require.True(t, diffBalanceTo%amount == 0)
-
+		require.Equal(t, accToBeforeTx.ID, accTo.ID)
+		// check accounts balance
+		diff1 := accFromBeforeTx.Balance - accFrom.Balance
+		diff2 := accTo.Balance - accToBeforeTx.Balance
+		require.Equal(t, diff1, diff2)
+		require.True(t, diff1 > 0)
+		require.True(t, diff1%amount == 0)
+		c := int(diff1 / amount)
+		require.True(t, c >= 1 && c <= n)
 	}
+
+	accFromAfterTx, _ := store.GetAccount(context.Background(), accFromBeforeTx.ID)
+	accToAfterTx, _ := store.GetAccount(context.Background(), accToBeforeTx.ID)
+	require.Equal(t, accFromAfterTx.Balance, accFromBeforeTx.Balance-(amount*int64(n)))
+	require.Equal(t, accToAfterTx.Balance, accToBeforeTx.Balance+(amount*int64(n)))
 
 }
