@@ -10,5 +10,11 @@ clear:
 test:
 	go test -v -cover ./...
 
+sqlc:
+	sqlc generate
+
+server:
+	go run main.go
+
 # not file in dir
-.PHONY: clear migrateup migratedown test
+.PHONY: clear migrateup migratedown test server sqlc
