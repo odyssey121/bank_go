@@ -31,7 +31,7 @@ func (server *Server) CreateAccount(ctx *gin.Context) {
 }
 
 type getAccountRequest struct {
-	ID int64 `uri:"id" bindings:"required,min=1"`
+	ID int64 `uri:"id" binding:"required,min=1"`
 }
 
 func (server *Server) GetAccount(ctx *gin.Context) {
@@ -52,8 +52,8 @@ func (server *Server) GetAccount(ctx *gin.Context) {
 }
 
 type getAccountListReq struct {
-	Page    int32 `form:"page" bindings:"required,min=1"`
-	PerPage int32 `form:"per_page" bindings:"required,min=10,max=25"`
+	Page    int32 `form:"page" binding:"required,min=1"`
+	PerPage int32 `form:"per_page" binding:"required,min=10,max=25"`
 }
 
 func (server *Server) GetAccountList(ctx *gin.Context) {

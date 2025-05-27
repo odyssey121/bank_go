@@ -14,7 +14,7 @@ sqlc:
 	sqlc generate
 
 server:
-	go run main.go
+	nodemon --exec go run main.go --ext go --signal SIGTERM
 
 # not file in dir
 .PHONY: clear migrateup migratedown test server sqlc

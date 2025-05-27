@@ -1,0 +1,6 @@
+db_driver:
+  "postgres"
+db_connection_string:
+  "postgresql://username:pass@localhost:5432/bank_go?sslmode=disable"
+web_server_address:
+  "localhost:8888"
