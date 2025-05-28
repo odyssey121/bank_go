@@ -6,17 +6,18 @@ import (
 )
 
 type Server struct {
-	store  *db.Store
+	store  db.Store
 	router *gin.Engine
 }
 
-func NewServer(store *db.Store) *Server {
+func NewServer(store db.Store) *Server {
 	server := &Server{store: store}
 
 	r := gin.Default()
 	r.POST("/accounts", server.CreateAccount)
 	r.GET("/accounts/:id", server.GetAccount)
 	r.GET("/accounts", server.GetAccountList)
+	r.POST("/transfer", server.Transfer)
 
 	server.router = r
 

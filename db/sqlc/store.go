@@ -4,18 +4,25 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+
+	_ "github.com/golang/mock/mockgen/model"
 )
 
-type Store struct {
+type Store interface {
+	Querier
+	TransferTx(ctx context.Context, param TransferTxParam) (TransferTxResult, error)
+}
+
+type SQLStore struct {
 	*Queries
 	db *sql.DB
 }
 
-func NewStore(db *sql.DB) *Store {
-	return &Store{db: db, Queries: New(db)}
+func NewStore(db *sql.DB) Store {
+	return &SQLStore{db: db, Queries: New(db)}
 }
 
-func (store *Store) execTx(ctx context.Context, fn func(*Queries) error) error {
+func (store *SQLStore) execTx(ctx context.Context, fn func(*Queries) error) error {
 	tx, err := store.db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
@@ -52,7 +59,7 @@ type TxKeyStructCtx struct{}
 
 var txKey = TxKeyStructCtx{}
 
-func (store *Store) TransferTx(ctx context.Context, param TransferTxParam) (TransferTxResult, error) {
+func (store *SQLStore) TransferTx(ctx context.Context, param TransferTxParam) (TransferTxResult, error) {
 	var result TransferTxResult
 	// ctxV := ctx.Value(txKey)
 	// fmt.Println(ctxV)
@@ -75,7 +82,7 @@ func (store *Store) TransferTx(ctx context.Context, param TransferTxParam) (Tran
 		if err != nil {
 			return err
 		}
-
+		// prevent deadlock
 		if param.FromAccountID < param.ToAccountID {
 			result.FromAccount, err = q.UpdateAccountBalanceMinus(ctx, UpdateAccountBalanceMinusParams{Amount: param.Amount, ID: param.FromAccountID})
 			if err != nil {

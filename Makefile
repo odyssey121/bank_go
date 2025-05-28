@@ -16,5 +16,8 @@ sqlc:
 server:
 	nodemon --exec go run main.go --ext go --signal SIGTERM
 
+mock:
+	mockgen -destination db/mock/store.go -package mockdb github.com/bank_go/db/sqlc Store
+
 # not file in dir
-.PHONY: clear migrateup migratedown test server sqlc
+.PHONY: clear migrateup migratedown test server sqlc mock
