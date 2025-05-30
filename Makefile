@@ -1,8 +1,17 @@
+migratecreate:
+	migrate create -dir db/migration -ext sql -seq 6 $(name)
+
 migrateup:
 	migrate -path db/migration -database "postgresql://username:pass@localhost:5432/bank_go?sslmode=disable" -verbose up
 
+migrateup1:
+	migrate -path db/migration -database "postgresql://username:pass@localhost:5432/bank_go?sslmode=disable" -verbose up 1
+
 migratedown:
 	migrate -path db/migration -database "postgresql://username:pass@localhost:5432/bank_go?sslmode=disable" -verbose down
+
+migratedown1:
+	migrate -path db/migration -database "postgresql://username:pass@localhost:5432/bank_go?sslmode=disable" -verbose down 1
 
 clear:
 	clear

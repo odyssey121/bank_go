@@ -11,7 +11,8 @@ import (
 )
 
 func createRandomAccount(t *testing.T) Account {
-	param := CreateAccountParams{util.RandomOwner(), util.RandomMoney(), util.RandomCurrency()}
+	user := createRandomUser(t)
+	param := CreateAccountParams{Owner: user.Username, Balance: util.RandomMoney(), Currency: util.RandomCurrency()}
 	acc, err := sqlcQueries.CreateAccount(context.Background(), param)
 	require.NoError(t, err)
 	require.NotEmpty(t, acc)
