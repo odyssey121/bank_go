@@ -3,6 +3,7 @@ package api
 import (
 	"fmt"
 	"net/http"
+	"time"
 
 	db "github.com/bank_go/db/sqlc"
 	"github.com/bank_go/util"
@@ -13,8 +14,16 @@ import (
 type createUserRequest struct {
 	Username string `json:"user_name" binding:"required"`
 	FullName string `json:"full_name" binding:"required"`
-	Email    string `json:"email" binding:"required"`
+	Email    string `json:"email" binding:"required,email"`
 	Password string `json:"password" binding:"required,min=6"`
+}
+
+type CreateUserResponse struct {
+	Username          string    `json:"user_name"`
+	FullName          string    `json:"full_name"`
+	Email             string    `json:"email"`
+	PasswordChangedAt time.Time `json:"password_changed_at"`
+	CreatedAt         time.Time `json:"created_at"`
 }
 
 func (server *Server) CreateUser(ctx *gin.Context) {
@@ -25,7 +34,6 @@ func (server *Server) CreateUser(ctx *gin.Context) {
 	}
 
 	hashedPass, err := util.HashPassword(req.Password)
-	fmt.Println("hashedPass:22", hashedPass)
 	if err != nil {
 		ctx.JSON(http.StatusForbidden, errorResponse(err))
 		return
@@ -48,7 +56,15 @@ func (server *Server) CreateUser(ctx *gin.Context) {
 		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
 		return
 	}
-	ctx.JSON(http.StatusOK, user)
+
+	resp := CreateUserResponse{
+		Username:          user.Username,
+		FullName:          user.FullName,
+		Email:             user.Email,
+		PasswordChangedAt: user.PasswordChangedAt,
+		CreatedAt:         user.CreatedAt,
+	}
+	ctx.JSON(http.StatusOK, resp)
 }
 
 type getUserRequest struct {

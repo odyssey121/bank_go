@@ -6,14 +6,46 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"reflect"
 	"testing"
 
 	mockdb "github.com/bank_go/db/mock"
 	db "github.com/bank_go/db/sqlc"
 	"github.com/bank_go/util"
+	"github.com/gin-gonic/gin"
 	"github.com/golang/mock/gomock"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+type userParamEqMatcher struct {
+	arg      db.CreateUserParams
+	password string
+}
+
+func (e userParamEqMatcher) Matches(x interface{}) bool {
+	arg, ok := x.(db.CreateUserParams)
+	if !ok {
+		return false
+	}
+
+	err := util.CheckPasswordHash(e.password, arg.HashedPassword)
+	if err != nil {
+		return false
+	}
+
+	e.arg.HashedPassword = arg.HashedPassword
+
+	return reflect.DeepEqual(e.arg, arg)
+}
+
+func (e userParamEqMatcher) String() string {
+	return fmt.Sprintf("is equal to %v (%T)", e.arg, e.arg)
+}
+
+func eqCreateUserParam(arg db.CreateUserParams, password string) gomock.Matcher {
+	return userParamEqMatcher{arg, password}
+}
 
 func GetRandomUser() db.User {
 	return db.User{
@@ -27,33 +59,53 @@ func GetRandomUser() db.User {
 func TestCreateUserApi(t *testing.T) {
 	user := GetRandomUser()
 	password := util.RandomString(6)
-	hashedPass, _ := util.HashPassword(password)
-	fmt.Println("hashedPass:", hashedPass)
+	hashedPass, err := util.HashPassword(password)
+	require.NoError(t, err)
+	// fmt.Println("hashedPass:", hashedPass)
 	user.HashedPassword = hashedPass
-	fmt.Println("user.HashedPassword:", user.HashedPassword)
+	// fmt.Println("user.HashedPassword:", user.HashedPassword)
 
 	testCases := []struct {
-		name       string
-		req        createUserRequest
-		buildStubs func(store *mockdb.MockStore)
-		checkResp  func(t *testing.T, recorder *httptest.ResponseRecorder)
+		name           string
+		reqUnserialize createUserRequest
+		buildStubs     func(store *mockdb.MockStore)
+		checkResp      func(t *testing.T, recorder *httptest.ResponseRecorder)
 	}{
 		{
-			name: "OK",
-			req:  createUserRequest{Username: user.Username, FullName: user.FullName, Email: user.Email, Password: password},
+			name:           "OK",
+			reqUnserialize: createUserRequest{Username: user.Username, FullName: user.FullName, Email: user.Email, Password: password},
 			buildStubs: func(store *mockdb.MockStore) {
-				// param := db.CreateUserParams{Username: user.Username, FullName: user.FullName, Email: user.Email, HashedPassword: hashedPass}
-				store.EXPECT().CreateUser(gomock.Any(), gomock.All()).Times(1).Return(user, nil)
+				param := db.CreateUserParams{Username: user.Username, FullName: user.FullName, Email: user.Email, HashedPassword: user.HashedPassword}
+				store.EXPECT().CreateUser(gomock.Any(), eqCreateUserParam(param, password)).Times(1).Return(user, nil)
 			},
 			checkResp: func(t *testing.T, recorder *httptest.ResponseRecorder) {
-				var respUser db.User
-				fmt.Println("recorder.Body.Bytes()", string(recorder.Body.Bytes()))
+				var respUser CreateUserResponse
 				require.Equal(t, http.StatusOK, recorder.Code)
 				err := json.Unmarshal(recorder.Body.Bytes(), &respUser)
 				require.NoError(t, err)
-				require.EqualValues(t, user, respUser)
+				require.Equal(t, respUser.Username, user.Username)
+				require.Equal(t, respUser.FullName, user.FullName)
+				require.Equal(t, respUser.Email, user.Email)
+				require.Equal(t, respUser.PasswordChangedAt, user.PasswordChangedAt)
 			},
-		}}
+		},
+		{
+			name:           "BadRequestValidation",
+			reqUnserialize: createUserRequest{Username: user.Username, Email: "user.Email", Password: "1"},
+			buildStubs:     func(store *mockdb.MockStore) {},
+			checkResp: func(t *testing.T, recorder *httptest.ResponseRecorder) {
+				var errResp gin.H
+				util.DeSerializeGinErr(&errResp, recorder.Result().Body)
+				assert.Contains(t, errResp["error"],
+					"'createUserRequest.FullName' Error:Field validation for 'FullName' failed on the 'required' tag",
+					"'createUserRequest.Password' Error:Field validation for 'Password' failed on the 'min' tag",
+					"'createUserRequest.Email' Error:Field validation for 'Email' failed on the 'email'",
+				)
+
+				require.Equal(t, http.StatusBadRequest, recorder.Code)
+			},
+		},
+	}
 
 	for i := range testCases {
 		tc := testCases[i]
@@ -70,8 +122,8 @@ func TestCreateUserApi(t *testing.T) {
 			recorder := httptest.NewRecorder()
 
 			payloadJson := new(bytes.Buffer)
-			util.Serialize(tc.req, payloadJson)
-			fmt.Println("payloadJson:", payloadJson)
+			util.Serialize(tc.reqUnserialize, payloadJson)
+			// fmt.Println("payloadJson:", payloadJson)
 
 			request, err := http.NewRequest(http.MethodPost, "/users", payloadJson)
 			require.NoError(t, err)
