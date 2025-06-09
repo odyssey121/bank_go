@@ -1,6 +1,8 @@
 package api
 
 import (
+	"database/sql"
+	"errors"
 	"fmt"
 	"net/http"
 	"time"
@@ -12,18 +14,28 @@ import (
 )
 
 type createUserRequest struct {
-	Username string `json:"user_name" binding:"required"`
+	Username string `json:"username" binding:"required"`
 	FullName string `json:"full_name" binding:"required"`
 	Email    string `json:"email" binding:"required,email"`
 	Password string `json:"password" binding:"required,min=6"`
 }
 
-type CreateUserResponse struct {
-	Username          string    `json:"user_name"`
+type userResponse struct {
+	Username          string    `json:"username"`
 	FullName          string    `json:"full_name"`
 	Email             string    `json:"email"`
 	PasswordChangedAt time.Time `json:"password_changed_at"`
 	CreatedAt         time.Time `json:"created_at"`
+}
+
+func createUserResponse(user db.User) userResponse {
+	return userResponse{
+		Username:          user.Username,
+		FullName:          user.FullName,
+		Email:             user.Email,
+		PasswordChangedAt: user.PasswordChangedAt,
+		CreatedAt:         user.CreatedAt,
+	}
 }
 
 func (server *Server) CreateUser(ctx *gin.Context) {
@@ -57,19 +69,60 @@ func (server *Server) CreateUser(ctx *gin.Context) {
 		return
 	}
 
-	resp := CreateUserResponse{
-		Username:          user.Username,
-		FullName:          user.FullName,
-		Email:             user.Email,
-		PasswordChangedAt: user.PasswordChangedAt,
-		CreatedAt:         user.CreatedAt,
+	resp := createUserResponse(user)
+	ctx.JSON(http.StatusOK, resp)
+}
+
+type loginUserReq struct {
+	Username string `json:"username"`
+	Passowrd string `json:"password"`
+}
+
+type loginUserResponse struct {
+	User        userResponse `json:"user"`
+	AccessToken string       `json:"token"`
+}
+
+func (server *Server) LoginUser(ctx *gin.Context) {
+	var req loginUserReq
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		return
 	}
+
+	user, err := server.store.GetUser(ctx, req.Username)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			ctx.JSON(http.StatusNotFound, errorResponse(err))
+			return
+		}
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
+	err = util.CheckPasswordHash(req.Passowrd, user.HashedPassword)
+	if err != nil {
+		ctx.JSON(http.StatusUnauthorized, errorResponse(err))
+		return
+	}
+
+	accessToken, err := server.tokenMaker.CreateToken(user.Username, server.cfg.JwtTokenDuration)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
+	resp := loginUserResponse{AccessToken: accessToken, User: createUserResponse(user)}
 	ctx.JSON(http.StatusOK, resp)
 }
 
 type getUserRequest struct {
 	Username string `uri:"username" binding:"required"`
 }
+
+var (
+	ErrUserDoNotToBelongAuthUser = errors.New("cannot get this user, doesn't belong to the authenticated user")
+)
 
 func (server *Server) GetUser(ctx *gin.Context) {
 	var req getUserRequest
@@ -81,7 +134,18 @@ func (server *Server) GetUser(ctx *gin.Context) {
 
 	user, err := server.store.GetUser(ctx, req.Username)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		if errors.Is(err, sql.ErrNoRows) {
+			ctx.JSON(http.StatusNotFound, errorResponse(err))
+		} else {
+			ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		}
+		return
+	}
+
+	authSubject := ctx.MustGet(authorizationContextKey)
+
+	if user.Username != authSubject {
+		ctx.JSON(http.StatusUnauthorized, errorResponse(ErrUserDoNotToBelongAuthUser))
 		return
 	}
 

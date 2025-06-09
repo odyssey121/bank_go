@@ -1,29 +1,46 @@
 package api
 
 import (
+	"github.com/bank_go/token"
+	"github.com/bank_go/util"
+
 	db "github.com/bank_go/db/sqlc"
 	"github.com/gin-gonic/gin"
 )
 
 type Server struct {
-	store  db.Store
-	router *gin.Engine
+	store      db.Store
+	router     *gin.Engine
+	tokenMaker token.Maker[*token.PasetoPayload]
+	cfg        util.Config
 }
 
-func NewServer(store db.Store) *Server {
-	server := &Server{store: store}
+func NewServer(store db.Store, cfg util.Config) (*Server, error) {
+	tokenMaker, err := token.NewPasetoMaker(cfg.JwtSecretKey)
+	if err != nil {
+		return nil, err
+	}
 
+	server := &Server{store: store, tokenMaker: tokenMaker, cfg: cfg}
+	server.setupRoulter()
+	return server, nil
+}
+
+func (server *Server) setupRoulter() {
 	r := gin.Default()
-	r.POST("/accounts", server.CreateAccount)
-	r.GET("/accounts/:id", server.GetAccount)
-	r.GET("/accounts", server.GetAccountList)
-	r.POST("/transfer", server.Transfer)
-	r.POST("/users", server.CreateUser)
-	r.GET("/users/:username", server.GetUser)
+
+	r.POST("/users/login", server.LoginUser)
+
+	authorizedGroup := r.Group("/")
+	authorizedGroup.Use(authMiddleware(server.tokenMaker))
+	authorizedGroup.POST("/accounts", server.CreateAccount)
+	authorizedGroup.GET("/accounts/:id", server.GetAccount)
+	authorizedGroup.GET("/accounts", server.GetAccountList)
+	authorizedGroup.POST("/transfer", server.Transfer)
+	authorizedGroup.POST("/users", server.CreateUser)
+	authorizedGroup.GET("/users/:username", server.GetUser)
 
 	server.router = r
-
-	return server
 }
 
 func (server *Server) Start(address string) error {

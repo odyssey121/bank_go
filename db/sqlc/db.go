@@ -57,6 +57,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.listAccountsStmt, err = db.PrepareContext(ctx, listAccounts); err != nil {
 		return nil, fmt.Errorf("error preparing query ListAccounts: %w", err)
 	}
+	if q.listAccountsByOwnerStmt, err = db.PrepareContext(ctx, listAccountsByOwner); err != nil {
+		return nil, fmt.Errorf("error preparing query ListAccountsByOwner: %w", err)
+	}
 	if q.updateAccountStmt, err = db.PrepareContext(ctx, updateAccount); err != nil {
 		return nil, fmt.Errorf("error preparing query UpdateAccount: %w", err)
 	}
@@ -126,6 +129,11 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing listAccountsStmt: %w", cerr)
 		}
 	}
+	if q.listAccountsByOwnerStmt != nil {
+		if cerr := q.listAccountsByOwnerStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing listAccountsByOwnerStmt: %w", cerr)
+		}
+	}
 	if q.updateAccountStmt != nil {
 		if cerr := q.updateAccountStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing updateAccountStmt: %w", cerr)
@@ -191,6 +199,7 @@ type Queries struct {
 	getTransferStmt               *sql.Stmt
 	getUserStmt                   *sql.Stmt
 	listAccountsStmt              *sql.Stmt
+	listAccountsByOwnerStmt       *sql.Stmt
 	updateAccountStmt             *sql.Stmt
 	updateAccountBalanceMinusStmt *sql.Stmt
 	updateAccountBalancePlusStmt  *sql.Stmt
@@ -211,6 +220,7 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		getTransferStmt:               q.getTransferStmt,
 		getUserStmt:                   q.getUserStmt,
 		listAccountsStmt:              q.listAccountsStmt,
+		listAccountsByOwnerStmt:       q.listAccountsByOwnerStmt,
 		updateAccountStmt:             q.updateAccountStmt,
 		updateAccountBalanceMinusStmt: q.updateAccountBalanceMinusStmt,
 		updateAccountBalancePlusStmt:  q.updateAccountBalancePlusStmt,

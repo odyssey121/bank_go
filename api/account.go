@@ -12,8 +12,7 @@ import (
 )
 
 type createAccountRequest struct {
-	Owner    string `json:"owner" binding:"required"`
-	Currency string `json:"currency" binding:"required,oneof=USD EUR"`
+	Currency string `json:"currency" binding:"required,oneof=USD EUR CAD RUB"`
 }
 
 func (server *Server) CreateAccount(ctx *gin.Context) {
@@ -23,7 +22,9 @@ func (server *Server) CreateAccount(ctx *gin.Context) {
 		return
 	}
 
-	param := db.CreateAccountParams{Owner: req.Owner, Balance: 0, Currency: req.Currency}
+	authSubject := ctx.MustGet(authorizationContextKey).(string)
+
+	param := db.CreateAccountParams{Owner: authSubject, Balance: 0, Currency: req.Currency}
 
 	acc, err := server.store.CreateAccount(ctx, param)
 	if err != nil {
@@ -47,6 +48,10 @@ type getAccountRequest struct {
 	ID int64 `uri:"id" binding:"required,min=1"`
 }
 
+var (
+	ErrAccountDoNotToBelongAuthUser = errors.New("cannot get this account, doesn't belong to the authenticated user")
+)
+
 func (server *Server) GetAccount(ctx *gin.Context) {
 	var req getAccountRequest
 
@@ -64,6 +69,14 @@ func (server *Server) GetAccount(ctx *gin.Context) {
 		}
 		return
 	}
+
+	authSubject := ctx.MustGet(authorizationContextKey)
+
+	if authSubject != acc.Owner {
+		ctx.JSON(http.StatusUnauthorized, errorResponse(ErrAccountDoNotToBelongAuthUser))
+		return
+	}
+
 	ctx.JSON(http.StatusOK, acc)
 
 }
@@ -81,9 +94,11 @@ func (server *Server) GetAccountList(ctx *gin.Context) {
 		return
 	}
 
-	param := db.ListAccountsParams{Limit: req.PerPage, Offset: (req.Page - 1) * req.PerPage}
+	authSubject := ctx.MustGet(authorizationContextKey).(string)
 
-	accounts, err := server.store.ListAccounts(ctx, param)
+	param := db.ListAccountsByOwnerParams{Owner: authSubject, Limit: req.PerPage, Offset: (req.Page - 1) * req.PerPage}
+
+	accounts, err := server.store.ListAccountsByOwner(ctx, param)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
 		return

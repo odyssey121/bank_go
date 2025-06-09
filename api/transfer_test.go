@@ -6,9 +6,11 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	mockdb "github.com/bank_go/db/mock"
 	db "github.com/bank_go/db/sqlc"
+	"github.com/bank_go/token"
 	"github.com/bank_go/util"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
@@ -36,6 +38,7 @@ func TestTransfer(t *testing.T) {
 		req        transferRequest
 		txParam    db.TransferTxParam
 		txRes      db.TransferTxResult
+		setupAuth  func(t *testing.T, request *http.Request, tokenMaker token.Maker[*token.PasetoPayload])
 		buildStubs func(store *mockdb.MockStore, param db.TransferTxParam, txRes db.TransferTxResult)
 		checkResp  func(t *testing.T, recorder *httptest.ResponseRecorder)
 	}{
@@ -43,10 +46,13 @@ func TestTransfer(t *testing.T) {
 			name:    "OK",
 			txParam: db.TransferTxParam{FromAccountID: accountFrom.ID, ToAccountID: accountTo.ID, Amount: Amount},
 			req:     transferRequest{accountFrom.ID, accountTo.ID, Amount, currency},
-			txRes:   db.TransferTxResult{FromAccount: accountFrom, ToAccount: accountTo, Transfer: transfer, FromEntry: fromEntry, ToEntry: toEntry},
+			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker[*token.PasetoPayload]) {
+				addAuthorizationHeader(t, accountFrom.Owner, request, authorizationHeaderKey, authorizationHeaderType, tokenMaker, time.Minute)
+			},
+			txRes: db.TransferTxResult{FromAccount: accountFrom, ToAccount: accountTo, Transfer: transfer, FromEntry: fromEntry, ToEntry: toEntry},
 			buildStubs: func(store *mockdb.MockStore, param db.TransferTxParam, txRes db.TransferTxResult) {
 				store.EXPECT().GetAccount(gomock.Any(), gomock.Eq(accountFrom.ID)).Times(1).Return(accountFrom, nil)
-				store.EXPECT().GetAccount(gomock.Any(), gomock.Eq(accountTo.ID)).Return(accountTo, nil)
+				store.EXPECT().GetAccount(gomock.Any(), gomock.Eq(accountTo.ID)).Times(1).Return(accountTo, nil)
 				store.EXPECT().TransferTx(gomock.Any(), param).Times(1).Return(txRes, nil)
 			},
 			checkResp: func(t *testing.T, recorder *httptest.ResponseRecorder) {
@@ -65,6 +71,9 @@ func TestTransfer(t *testing.T) {
 			txParam: db.TransferTxParam{FromAccountID: accountFrom.ID, ToAccountID: accountTo.ID, Amount: Amount},
 			req:     transferRequest{accountFrom.ID, accountTo.ID, Amount, currency},
 			txRes:   db.TransferTxResult{FromAccount: accountFrom, ToAccount: accountTo, Transfer: transfer, FromEntry: fromEntry, ToEntry: toEntry},
+			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker[*token.PasetoPayload]) {
+				addAuthorizationHeader(t, accountFrom.Owner, request, authorizationHeaderKey, authorizationHeaderType, tokenMaker, time.Minute)
+			},
 			buildStubs: func(store *mockdb.MockStore, param db.TransferTxParam, txRes db.TransferTxResult) {
 				accountWithMismatchedCurrency := accountFrom
 				for {
@@ -93,7 +102,7 @@ func TestTransfer(t *testing.T) {
 			tc.buildStubs(store, tc.txParam, tc.txRes)
 
 			// start test server request
-			server := NewServer(store)
+			server := NewTestServer(t, store)
 			recorder := httptest.NewRecorder()
 
 			payloadJson := new(bytes.Buffer)
@@ -102,6 +111,8 @@ func TestTransfer(t *testing.T) {
 
 			request, err := http.NewRequest(http.MethodPost, "/transfer", payloadJson)
 			require.NoError(t, err)
+			// add authorization header
+			tc.setupAuth(t, request, server.tokenMaker)
 
 			server.router.ServeHTTP(recorder, request)
 			// check response

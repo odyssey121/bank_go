@@ -13,7 +13,7 @@ import (
 func main() {
 	var err error
 
-	cfg, err := util.LoadConfig("./config")
+	cfg, err := util.LoadConfig("./.config")
 	if err != nil {
 		log.Fatal("cannot load config: ", err)
 	}
@@ -25,7 +25,11 @@ func main() {
 	}
 
 	store := db.NewStore(conn)
-	server := api.NewServer(store)
+	server, err := api.NewServer(store, cfg)
+
+	if err != nil {
+		log.Fatal("cannot create to new server: ", err)
+	}
 
 	err = server.Start(cfg.WebServerAddress)
 	if err != nil {

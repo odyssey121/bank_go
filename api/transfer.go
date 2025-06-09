@@ -24,11 +24,23 @@ func (server *Server) Transfer(ctx *gin.Context) {
 		return
 	}
 
-	if !server.isValidAccountCurrency(ctx, req.FromAccountID, req.Currency) {
+	validCurrAccFrom, accountFrom := server.isValidAccountCurrency(ctx, req.FromAccountID, req.Currency)
+
+	if !validCurrAccFrom {
 		return
 	}
 
-	if !server.isValidAccountCurrency(ctx, req.ToAccountID, req.Currency) {
+	validCurrAccTo, _ := server.isValidAccountCurrency(ctx, req.ToAccountID, req.Currency)
+
+	if !validCurrAccTo {
+		return
+	}
+
+	authSubject := ctx.MustGet(authorizationContextKey)
+
+	if authSubject != accountFrom.Owner {
+		err := errors.New("from account doesn't belong to the authenticated user")
+		ctx.JSON(http.StatusUnauthorized, errorResponse(err))
 		return
 	}
 
@@ -44,7 +56,7 @@ func (server *Server) Transfer(ctx *gin.Context) {
 
 }
 
-func (server *Server) isValidAccountCurrency(ctx *gin.Context, id int64, currency string) bool {
+func (server *Server) isValidAccountCurrency(ctx *gin.Context, id int64, currency string) (bool, db.Account) {
 	account, err := server.store.GetAccount(ctx, id)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -52,14 +64,14 @@ func (server *Server) isValidAccountCurrency(ctx *gin.Context, id int64, currenc
 		} else {
 			ctx.JSON(http.StatusInternalServerError, errorResponse(err))
 		}
-		return false
+		return false, account
 	}
 
 	if account.Currency != currency {
 		ctx.JSON(http.StatusBadRequest, errorResponse(fmt.Errorf("account id = %d mismatched with currency %s", account.ID, currency)))
-		return false
+		return false, account
 	}
 
-	return true
+	return true, account
 
 }

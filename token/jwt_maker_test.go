@@ -27,7 +27,7 @@ func TestJWTMAkerCreateToken(t *testing.T) {
 	require.WithinDuration(t, resultVerify.ExpiresAt.Time, expiredAt, time.Second)
 }
 
-func TestExpiredToken(t *testing.T) {
+func TestJWTMakerExpiredToken(t *testing.T) {
 	maker, err := NewJWTMaker(util.RandomString(32))
 	require.NoError(t, err)
 	token, err := maker.CreateToken(util.RandomOwner(), -time.Minute)

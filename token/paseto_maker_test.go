@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestPasetoMaker(t *testing.T) {
+func TestPasetoMakerCreateToken(t *testing.T) {
 	username := util.RandomOwner()
 	duration := time.Minute
 	maker, err := NewPasetoMaker(util.RandomString(chacha20poly1305.KeySize))
