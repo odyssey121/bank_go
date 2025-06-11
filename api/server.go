@@ -37,7 +37,7 @@ func (server *Server) setupRoulter() {
 	authorizedGroup.GET("/accounts/:id", server.GetAccount)
 	authorizedGroup.GET("/accounts", server.GetAccountList)
 	authorizedGroup.POST("/transfer", server.Transfer)
-	authorizedGroup.POST("/users", server.CreateUser)
+	r.POST("/users", server.CreateUser)
 	authorizedGroup.GET("/users/:username", server.GetUser)
 
 	server.router = r

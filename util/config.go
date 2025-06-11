@@ -1,6 +1,7 @@
 package util
 
 import (
+	"os"
 	"time"
 
 	"github.com/spf13/viper"
@@ -16,8 +17,12 @@ type Config struct {
 
 func LoadConfig(configPath string) (Config, error) {
 	var cfg Config
+	confingFileName := "config"
+	if path, exists := os.LookupEnv("CONFIG_FILE_NAME"); exists {
+		confingFileName = path
+	}
 	viper.AddConfigPath(configPath)
-	viper.SetConfigName("config")
+	viper.SetConfigName(confingFileName)
 	viper.SetConfigType("yaml")
 	viper.AutomaticEnv()
 	err := viper.ReadInConfig() // Find and read the config file

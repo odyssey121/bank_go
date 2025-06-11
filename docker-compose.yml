@@ -1,19 +1,28 @@
-version: '3.1'
+version: '3.9'
 
 services:
 
   postgres:
     image: postgres:14.1-alpine
-    container_name: postgres_bank_go
+    container_name: postgres_container
     environment:
       POSTGRES_USER: username
       POSTGRES_PASSWORD: pass
       POSTGRES_DB: bank_go
-    volumes:
-      - ./.docker/postgres:/var/lib/postgresql/data/
     ports:
       - 5432:5432
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+       - 8080:8888
+    environment:
+      - CONFIG_FILE_NAME=config_docker
+    depends_on:
+      - postgres
 
-volumes:
-  postgres_data:
-    driver: local
+# networks:
+#   network1:
+#     name: bank_go_network
+#     external: true

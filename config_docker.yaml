@@ -1,0 +1,10 @@
+db_driver:
+  "postgres"
+db_connection_string:
+  "postgresql://username:pass@postgres_container:5432/bank_go?sslmode=disable"
+web_server_address:
+  "0.0.0.0:8888"
+jwt_secret_key:
+  "4kg5AOd8fUIEffV6TVkhqBJbcOi07A3X"
+jwt_token_duration:
+  24h
