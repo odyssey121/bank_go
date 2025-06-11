@@ -7,4 +7,6 @@ web_server_address:
 jwt_secret_key:
   "4kg5AOd8fUIEffV6TVkhqBJbcOi07A3X"
 jwt_token_duration:
+  15m
+jwt_refresh_token_duration:
   24h

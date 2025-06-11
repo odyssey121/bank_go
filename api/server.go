@@ -30,6 +30,7 @@ func (server *Server) setupRoulter() {
 	r := gin.Default()
 
 	r.POST("/users/login", server.LoginUser)
+	r.POST("/token/refresh", server.RefreshToken)
 
 	authorizedGroup := r.Group("/")
 	authorizedGroup.Use(authMiddleware(server.tokenMaker))
