@@ -4,7 +4,7 @@
 // - protoc             v3.6.1
 // source: service.proto
 
-package bank_go
+package pb_sources
 
 import (
 	context "context"

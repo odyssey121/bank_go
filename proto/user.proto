@@ -4,8 +4,7 @@ package pb;
 
 import "google/protobuf/timestamp.proto";
 
-option go_package = "github.com/bank_go";
-
+option go_package = "github.com/bank_go/pb_sources";
 
 message User {
     string username = 1;

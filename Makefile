@@ -32,9 +32,14 @@ mock:
 	mockgen -destination db/mock/store.go -package mockdb github.com/bank_go/db/sqlc Store
 
 proto:
+	rm -fv pb/*.go
 	protoc --proto_path=proto --go_out=pb --go_opt=paths=source_relative \
     --go-grpc_out=pb --go-grpc_opt=paths=source_relative \
+	--grpc-gateway_out=pb --grpc-gateway_opt=paths=source_relative \
     proto/*.proto
 
+evans:
+	evans -r repl --host localhost --port 9090
+
 # not file in dir
-.PHONY: clear migrateup migratedown test server sqlc mock migrateup1 proto
+.PHONY: clear migrateup migratedown test server sqlc mock migrateup1 proto evans
