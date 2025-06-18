@@ -4,9 +4,10 @@ db_connection_string:
   "postgresql://username:pass@localhost:5432/bank_go?sslmode=disable"
 web_server_address:
   "localhost:8888"
+grpc_server_address:
+  "localhost:9090"
 jwt_secret_key:
   "4kg5AOd8fUIEffV6TVkhqBJbcOi07A3X"
-
 jwt_token_duration:
   15m
 jwt_refresh_token_duration:
