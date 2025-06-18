@@ -74,6 +74,71 @@ func (server *Server) CreateUser(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, resp)
 }
 
+type UpdateUserRequest struct {
+	Username string `json:"username" binding:"required"`
+	FullName string `json:"full_name"`
+	Email    string `json:"email"`
+	Password string `json:"password"`
+}
+
+type UpdateUserResponse struct {
+	User userResponse `json:"user"`
+}
+
+var ErrConnotUpdateThisUser = errors.New("auth user cannot update incoming username")
+
+func (server *Server) UpdateUser(ctx *gin.Context) {
+	var req UpdateUserRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+
+	authSubject := ctx.MustGet(authorizationContextKey)
+
+	if req.Username != authSubject {
+		ctx.JSON(http.StatusBadRequest, errorResponse(ErrConnotUpdateThisUser))
+		return
+
+	}
+
+	param := db.UpdateUserParams{
+		Username: req.Username,
+		FullName: sql.NullString{String: req.FullName, Valid: req.FullName != ""},
+		Email:    sql.NullString{String: req.Email, Valid: req.Email != ""},
+	}
+
+	if req.Password != "" {
+		hashedPassword, err := util.HashPassword(req.Password)
+		if err != nil {
+			ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+			return
+		}
+
+		param.HashedPassword = sql.NullString{String: hashedPassword, Valid: true}
+		param.PasswordChangedAt = sql.NullTime{Time: time.Now(), Valid: true}
+
+	}
+
+	user, err := server.store.UpdateUser(ctx, param)
+
+	if err != nil {
+		if pqErr, ok := err.(*pq.Error); ok {
+			switch pqErr.Code.Name() {
+			case "unique_violation":
+				ctx.JSON(http.StatusForbidden, errorResponse(err))
+				return
+			}
+
+		}
+
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
+	ctx.JSON(http.StatusOK, UpdateUserResponse{User: createUserResponse(user)})
+}
+
 type loginUserReq struct {
 	Username string `json:"username"`
 	Passowrd string `json:"password"`

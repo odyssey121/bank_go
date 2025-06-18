@@ -153,6 +153,116 @@ func TestCreateUserApi(t *testing.T) {
 
 }
 
+func TestUpdateUserApi(t *testing.T) {
+	user1 := GetRandomUser(t)
+	user2 := GetRandomUser(t)
+	newPassword := util.RandomString(6)
+	newHashedPassword, err := util.HashPassword(newPassword)
+	require.NoError(t, err)
+
+	updatedUser := db.User{Username: user1.Username, FullName: user2.FullName, Email: user2.Email, HashedPassword: newHashedPassword}
+
+	testCases := []struct {
+		name           string
+		reqUnserialize UpdateUserRequest
+		setupAuth      func(t *testing.T, request *http.Request, tokenMaker token.Maker[*token.PasetoPayload])
+		buildStubs     func(store *mockdb.MockStore)
+		checkResp      func(t *testing.T, recorder *httptest.ResponseRecorder)
+	}{
+		{
+			name:           "OK",
+			reqUnserialize: UpdateUserRequest{Username: user1.Username, FullName: user2.FullName, Email: user2.Email, Password: newPassword},
+			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker[*token.PasetoPayload]) {
+				addAuthorizationHeader(t, user1.Username, request, authorizationHeaderKey, authorizationHeaderType, tokenMaker, time.Minute)
+			},
+			buildStubs: func(store *mockdb.MockStore) {
+				// todo add eq matcher for params
+				// param := db.UpdateUserParams{
+				// 	Username:       user1.Username,
+				// 	FullName:       sql.NullString{String: user2.FullName, Valid: true},
+				// 	Email:          sql.NullString{String: user2.Email, Valid: true},
+				// 	HashedPassword: sql.NullString{String: newHashedPassword, Valid: true},
+				// }
+				store.EXPECT().UpdateUser(gomock.Any(), gomock.Any()).Times(1).Return(updatedUser, nil)
+			},
+			checkResp: func(t *testing.T, recorder *httptest.ResponseRecorder) {
+				var respUser UpdateUserResponse
+				require.Equal(t, http.StatusOK, recorder.Code)
+				err := json.Unmarshal(recorder.Body.Bytes(), &respUser)
+				require.NoError(t, err)
+				require.Equal(t, respUser.User.Username, updatedUser.Username)
+				require.Equal(t, respUser.User.FullName, updatedUser.FullName)
+				require.Equal(t, respUser.User.Email, updatedUser.Email)
+				require.Equal(t, respUser.User.PasswordChangedAt, updatedUser.PasswordChangedAt)
+			},
+		},
+		{
+			name:           "UsernameNotGiven",
+			reqUnserialize: UpdateUserRequest{FullName: user2.FullName, Email: user2.Email, Password: newPassword},
+			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker[*token.PasetoPayload]) {
+				addAuthorizationHeader(t, user1.Username, request, authorizationHeaderKey, authorizationHeaderType, tokenMaker, time.Minute)
+			},
+			buildStubs: func(store *mockdb.MockStore) {
+			},
+			checkResp: func(t *testing.T, recorder *httptest.ResponseRecorder) {
+				var errResp gin.H
+				util.DeSerializeGinErr(&errResp, recorder.Result().Body)
+				assert.Contains(t, errResp["error"],
+					"Key: 'UpdateUserRequest.Username' Error:Field validation for 'Username' failed on the 'required' tag",
+				)
+				require.Equal(t, http.StatusBadRequest, recorder.Code)
+			},
+		},
+		{
+			name:           "AuthUserCannotUpdate",
+			reqUnserialize: UpdateUserRequest{Username: "anonimus", FullName: user2.FullName, Email: user2.Email, Password: newPassword},
+			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker[*token.PasetoPayload]) {
+				addAuthorizationHeader(t, user1.Username, request, authorizationHeaderKey, authorizationHeaderType, tokenMaker, time.Minute)
+			},
+			buildStubs: func(store *mockdb.MockStore) {
+			},
+			checkResp: func(t *testing.T, recorder *httptest.ResponseRecorder) {
+				var errResp gin.H
+				util.DeSerializeGinErr(&errResp, recorder.Result().Body)
+				require.Equal(t, errResp["error"], ErrConnotUpdateThisUser.Error())
+				require.Equal(t, http.StatusBadRequest, recorder.Code)
+			},
+		},
+	}
+
+	for i := range testCases {
+		tc := testCases[i]
+		t.Run(tc.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			store := mockdb.NewMockStore(ctrl)
+			// test build stubs
+			tc.buildStubs(store)
+
+			// start test server request
+			server := NewTestServer(t, store)
+			recorder := httptest.NewRecorder()
+
+			payloadJson := new(bytes.Buffer)
+			util.Serialize(tc.reqUnserialize, payloadJson)
+			// fmt.Println("payloadJson:", payloadJson)
+
+			request, err := http.NewRequest(http.MethodPut, "/users", payloadJson)
+			require.NoError(t, err)
+			//add auth header
+			tc.setupAuth(t, request, server.tokenMaker)
+
+			server.router.ServeHTTP(recorder, request)
+			// check response
+			tc.checkResp(t, recorder)
+
+		})
+
+	}
+
+}
+
 func TestGetUserApi(t *testing.T) {
 	user := GetRandomUser(t)
 	testCases := []struct {

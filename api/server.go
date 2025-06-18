@@ -40,6 +40,7 @@ func (server *Server) setupRoulter() {
 	authorizedGroup.POST("/transfer", server.Transfer)
 	r.POST("/users", server.CreateUser)
 	authorizedGroup.GET("/users/:username", server.GetUser)
+	authorizedGroup.PUT("/users", server.UpdateUser)
 
 	server.router = r
 }
