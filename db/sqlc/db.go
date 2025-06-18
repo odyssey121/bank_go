@@ -75,6 +75,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.updateAccountBalancePlusStmt, err = db.PrepareContext(ctx, updateAccountBalancePlus); err != nil {
 		return nil, fmt.Errorf("error preparing query UpdateAccountBalancePlus: %w", err)
 	}
+	if q.updateUserStmt, err = db.PrepareContext(ctx, updateUser); err != nil {
+		return nil, fmt.Errorf("error preparing query UpdateUser: %w", err)
+	}
 	return &q, nil
 }
 
@@ -165,6 +168,11 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing updateAccountBalancePlusStmt: %w", cerr)
 		}
 	}
+	if q.updateUserStmt != nil {
+		if cerr := q.updateUserStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing updateUserStmt: %w", cerr)
+		}
+	}
 	return err
 }
 
@@ -221,6 +229,7 @@ type Queries struct {
 	updateAccountStmt             *sql.Stmt
 	updateAccountBalanceMinusStmt *sql.Stmt
 	updateAccountBalancePlusStmt  *sql.Stmt
+	updateUserStmt                *sql.Stmt
 }
 
 func (q *Queries) WithTx(tx *sql.Tx) *Queries {
@@ -244,5 +253,6 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		updateAccountStmt:             q.updateAccountStmt,
 		updateAccountBalanceMinusStmt: q.updateAccountBalanceMinusStmt,
 		updateAccountBalancePlusStmt:  q.updateAccountBalancePlusStmt,
+		updateUserStmt:                q.updateUserStmt,
 	}
 }
