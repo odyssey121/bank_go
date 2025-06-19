@@ -8,13 +8,14 @@ import (
 )
 
 type Config struct {
-	DbDriver                 string        `mapstructure:"db_driver"`
-	DbConnectionString       string        `mapstructure:"db_connection_string"`
-	WebServerAddress         string        `mapstructure:"web_server_address"`
-	JwtSecretKey             string        `mapstructure:"jwt_secret_key"`
-	JwtTokenDuration         time.Duration `mapstructure:"jwt_token_duration"`
-	JWtRefreshTokenDuration  time.Duration `mapstructure:"jwt_refresh_token_duration"`
-	GrpcServerAddress        string        `mapstructure:"grpc_server_address"`
+	Enviroment              string        `mapstructure:"enviroment"`
+	DbDriver                string        `mapstructure:"db_driver"`
+	DbConnectionString      string        `mapstructure:"db_connection_string"`
+	WebServerAddress        string        `mapstructure:"web_server_address"`
+	JwtSecretKey            string        `mapstructure:"jwt_secret_key"`
+	JwtTokenDuration        time.Duration `mapstructure:"jwt_token_duration"`
+	JWtRefreshTokenDuration time.Duration `mapstructure:"jwt_refresh_token_duration"`
+	GrpcServerAddress       string        `mapstructure:"grpc_server_address"`
 }
 
 func LoadConfig(configPath string) (Config, error) {

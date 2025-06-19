@@ -3,9 +3,9 @@ package main
 import (
 	"context"
 	"database/sql"
-	"log"
 	"net"
 	"net/http"
+	"os"
 
 	"github.com/bank_go/api"
 	db "github.com/bank_go/db/sqlc"
@@ -14,6 +14,8 @@ import (
 	"github.com/bank_go/util"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	_ "github.com/lib/pq"
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/reflection"
@@ -24,13 +26,18 @@ func main() {
 	var err error
 	cfg, err := util.LoadConfig(".")
 	if err != nil {
-		log.Fatal("cannot load config: ", err)
+		log.Fatal().Err(err).Msg("cannot load config")
+	}
+
+	// loger
+	if cfg.Enviroment == "development" {
+		log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
 	}
 
 	conn, err := sql.Open(cfg.DbDriver, cfg.DbConnectionString)
 
 	if err != nil {
-		log.Fatal("cannot connect to db: ", err)
+		log.Fatal().Err(err).Msg("cannot connect to db")
 	}
 
 	store := db.NewStore(conn)
@@ -43,20 +50,23 @@ func main() {
 func runGrpcServer(store db.Store, cfg util.Config) {
 	gapiServer, err := gapi.NewServer(store, cfg)
 	if err != nil {
-		log.Fatalf("cannot create gapi server: %v", err)
+		log.Fatal().Err(err).Msg("cannot create gapi server")
 	}
 
 	lis, err := net.Listen("tcp", cfg.GrpcServerAddress)
 	if err != nil {
-		log.Fatalf("failed to listen: %v", err)
+		log.Fatal().Err(err).Msg("failed to listen")
 	}
+	// loger
+	grpcLogger := grpc.UnaryInterceptor(gapi.GrpcLogger)
 
-	grpcServer := grpc.NewServer()
+	grpcServer := grpc.NewServer(grpcLogger)
 	reflection.Register(grpcServer)
 	pb_sources.RegisterBankGoServer(grpcServer, gapiServer)
-	log.Printf("gapi server listening at %v", lis.Addr())
+
+	log.Info().Msgf("gapi server listening at %v", lis.Addr())
 	if err := grpcServer.Serve(lis); err != nil {
-		log.Fatalf("failed to gapi serve: %v", err)
+		log.Fatal().Err(err).Msg("failed to gapi serve")
 	}
 
 }
@@ -81,14 +91,14 @@ func runGrpcGatewayServer(cfg util.Config) {
 
 	err := pb_sources.RegisterBankGoHandlerFromEndpoint(ctx, mux, cfg.GrpcServerAddress, opts)
 	if err != nil {
-		log.Fatalf("failed to RegisterBankGoHandlerFromEndpoint: %v", err)
+		log.Fatal().Err(err).Msg("failed to RegisterBankGoHandlerFromEndpoint")
 	}
 
 	// Start HTTP server (and proxy calls to gRPC server endpoint)
-	log.Printf("gapi gateway server listening at %s", cfg.WebServerAddress)
+	log.Info().Msgf("gapi gateway server listening at %s", cfg.WebServerAddress)
 	err = http.ListenAndServe(cfg.WebServerAddress, mux)
 	if err != nil {
-		log.Fatalf("failed to gapi gateway serve: %v", err)
+		log.Fatal().Err(err).Msg("failed to gapi gateway serve")
 	}
 
 }
@@ -97,11 +107,11 @@ func runGinServer(store db.Store, cfg util.Config) {
 	server, err := api.NewServer(store, cfg)
 
 	if err != nil {
-		log.Fatal("cannot create to new server: ", err)
+		log.Fatal().Err(err).Msg("cannot create to new server")
 	}
 
 	err = server.Start(cfg.WebServerAddress)
 	if err != nil {
-		log.Fatal("cannot start server: ", err)
+		log.Fatal().Err(err).Msg("cannot start server")
 	}
 }

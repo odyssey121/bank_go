@@ -1,3 +1,5 @@
+enviroment:
+  "production"
 db_driver:
   "postgres"
 db_connection_string:
