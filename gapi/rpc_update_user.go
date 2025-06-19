@@ -19,13 +19,23 @@ func (server *Server) UpdateUser(ctx context.Context, req *pb_sources.UpdateUser
 	if val != nil {
 		return nil, invalidArgumentError(val)
 	}
+
+	authPayload, err := server.authorizeUser(ctx, []string{})
+	if err != nil {
+		return nil, unauthenticatedError(err)
+	}
+
+	if req.Username != authPayload.Username {
+		return nil, status.Errorf(codes.PermissionDenied, "cannot update other user's info")
+	}
+
 	param := db.UpdateUserParams{
 		Username: req.GetUsername(),
 		FullName: sql.NullString{String: req.GetFullName(), Valid: len(req.FullName) > 0},
 		Email:    sql.NullString{String: req.GetEmail(), Valid: len(req.Email) >= 4},
 	}
 
-	if len(req.Password) >= 6 {
+	if len(req.Password) > 1 {
 		hashedPass, err := util.HashPassword(req.GetPassword())
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "failed to hash password")

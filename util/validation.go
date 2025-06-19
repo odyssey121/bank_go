@@ -20,7 +20,7 @@ func ValidateString(value string, minLength int, maxLength int) error {
 }
 
 func ValidateUsername(value string) error {
-	if err := ValidateString(value, 3, 100); err != nil {
+	if err := ValidateString(value, 1, 100); err != nil {
 		return err
 	}
 	if !isValidUsername(value) {
