@@ -9,20 +9,20 @@ import (
 	db "github.com/bank_go/db/sqlc"
 	pb_sources "github.com/bank_go/pb"
 	"github.com/bank_go/util"
+	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
 func (server *Server) UpdateUser(ctx context.Context, req *pb_sources.UpdateUserRequest) (*pb_sources.UpdateUserResponse, error) {
-
+	val := validateUpdateUserRequest(req)
+	if val != nil {
+		return nil, invalidArgumentError(val)
+	}
 	param := db.UpdateUserParams{
 		Username: req.GetUsername(),
 		FullName: sql.NullString{String: req.GetFullName(), Valid: len(req.FullName) > 0},
 		Email:    sql.NullString{String: req.GetEmail(), Valid: len(req.Email) >= 4},
-	}
-
-	if req.Username == "" {
-		return nil, status.Errorf(codes.Canceled, "username not given")
 	}
 
 	if len(req.Password) >= 6 {
@@ -46,4 +46,30 @@ func (server *Server) UpdateUser(ctx context.Context, req *pb_sources.UpdateUser
 
 	resp := &pb_sources.UpdateUserResponse{User: convertUser(user)}
 	return resp, nil
+}
+
+func validateUpdateUserRequest(req *pb_sources.UpdateUserRequest) (violations []*errdetails.BadRequest_FieldViolation) {
+	if err := util.ValidateUsername(req.GetUsername()); err != nil {
+		violations = append(violations, fieldViolation("username", err))
+	}
+
+	if req.Password != "" {
+		if err := util.ValidatePassword(req.GetPassword()); err != nil {
+			violations = append(violations, fieldViolation("password", err))
+		}
+	}
+
+	if req.FullName != "" {
+		if err := util.ValidateFullName(req.GetFullName()); err != nil {
+			violations = append(violations, fieldViolation("full_name", err))
+		}
+	}
+
+	if req.Email != "" {
+		if err := util.ValidateEmail(req.GetEmail()); err != nil {
+			violations = append(violations, fieldViolation("email", err))
+		}
+	}
+
+	return violations
 }
