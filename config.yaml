@@ -8,6 +8,8 @@ web_server_address:
   "localhost:8888"
 grpc_server_address:
   "localhost:9090"
+redis_server_address:
+  "localhost:6379"
 jwt_secret_key:
   "4kg5AOd8fUIEffV6TVkhqBJbcOi07A3X"
 jwt_token_duration:
