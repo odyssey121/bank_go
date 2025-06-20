@@ -87,6 +87,8 @@ func runGrpcGatewayServer(cfg util.Config) {
 
 	mux := runtime.NewServeMux(jsonOption)
 
+	handler := gapi.HttpLogger(mux)
+
 	opts := []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials())}
 
 	err := pb_sources.RegisterBankGoHandlerFromEndpoint(ctx, mux, cfg.GrpcServerAddress, opts)
@@ -96,7 +98,7 @@ func runGrpcGatewayServer(cfg util.Config) {
 
 	// Start HTTP server (and proxy calls to gRPC server endpoint)
 	log.Info().Msgf("gapi gateway server listening at %s", cfg.WebServerAddress)
-	err = http.ListenAndServe(cfg.WebServerAddress, mux)
+	err = http.ListenAndServe(cfg.WebServerAddress, handler)
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to gapi gateway serve")
 	}
