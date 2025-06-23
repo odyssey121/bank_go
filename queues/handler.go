@@ -5,6 +5,8 @@ import (
 
 	db "github.com/bank_go/db/sqlc"
 	"github.com/hibiken/asynq"
+	"github.com/redis/go-redis/v9"
+	"github.com/rs/zerolog/log"
 )
 
 const (
@@ -24,6 +26,8 @@ type RedisTaskHandler struct {
 }
 
 func NewRedisTaskHandler(store db.Store, redisAsynqOpt asynq.RedisClientOpt) TaskHandler {
+	logger := NewLogger()
+	redis.SetLogger(logger)
 	srv := asynq.NewServer(
 		redisAsynqOpt,
 		asynq.Config{
@@ -35,6 +39,13 @@ func NewRedisTaskHandler(store db.Store, redisAsynqOpt asynq.RedisClientOpt) Tas
 				QueueDefault:  3,
 				QueueLow:      1,
 			},
+			ErrorHandler: asynq.ErrorHandlerFunc(func(ctx context.Context, task *asynq.Task, err error) {
+				log.Error().Err(err).
+					Str("type", TypeSendVerifyEmail).
+					Bytes("payload", task.Payload()).
+					Msg("processing the queue task")
+			}),
+			Logger: logger,
 		},
 	)
 

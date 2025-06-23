@@ -40,7 +40,7 @@ func main() {
 		log.Fatal().Err(err).Msg("cannot load config")
 	}
 
-	// loger
+	// logger
 	if cfg.Enviroment == "development" {
 		log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
 	}
@@ -104,7 +104,7 @@ func runGrpcServer(ctx context.Context, wg *errgroup.Group, store db.Store, cfg 
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to listen")
 	}
-	// loger
+	// logger
 	grpcLogger := grpc.UnaryInterceptor(gapi.GrpcLogger)
 
 	grpcServer := grpc.NewServer(grpcLogger)
