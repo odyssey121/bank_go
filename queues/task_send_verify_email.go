@@ -16,6 +16,7 @@ const (
 
 type EmailVerifyPayload struct {
 	Username string
+	Email    string
 }
 
 //----------------------------------------------
@@ -23,13 +24,13 @@ type EmailVerifyPayload struct {
 // A task consists of a type and a payload.
 //----------------------------------------------
 
-func (redisTaskProvider *RedisTaskProvider) ProvideEmailVerifyTask(ctx context.Context, p *EmailVerifyPayload) error {
+func (redisTaskProvider *RedisTaskProvider) ProvideEmailVerifyTask(ctx context.Context, p *EmailVerifyPayload, asynqOpts ...asynq.Option) error {
 	payload, err := json.Marshal(p)
 	if err != nil {
 		fmt.Errorf("failde marshal task payload: %w", err)
 	}
 
-	task := asynq.NewTask(TypeSendVerifyEmail, payload)
+	task := asynq.NewTask(TypeSendVerifyEmail, payload, asynqOpts...)
 	info, err := redisTaskProvider.client.EnqueueContext(ctx, task)
 	if err != nil {
 		return fmt.Errorf("failed to enqueue task: %w", err)

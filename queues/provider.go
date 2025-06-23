@@ -7,7 +7,7 @@ import (
 )
 
 type TaskProvider interface {
-	ProvideEmailVerifyTask(ctx context.Context, p *EmailVerifyPayload) error
+	ProvideEmailVerifyTask(ctx context.Context, p *EmailVerifyPayload, asynqOpts ...asynq.Option) error
 }
 
 type RedisTaskProvider struct {

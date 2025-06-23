@@ -6,7 +6,9 @@ import (
 
 	db "github.com/bank_go/db/sqlc"
 	pb_sources "github.com/bank_go/pb"
+	"github.com/bank_go/queues"
 	"github.com/bank_go/util"
+	"github.com/hibiken/asynq"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -51,6 +53,8 @@ func (server *Server) LoginUser(ctx context.Context, req *pb_sources.LoginUserRe
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to create session error = %s", err)
 	}
+
+	server.qtProvider.ProvideEmailVerifyTask(ctx, &queues.EmailVerifyPayload{Username: "test"}, asynq.Queue(queues.QueueLow))
 
 	resp := &pb_sources.LoginUserResponse{
 		SessionId:             session.ID.String(),

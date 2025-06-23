@@ -3,7 +3,6 @@ package api
 import (
 	"database/sql"
 	"errors"
-	"fmt"
 	"net/http"
 	"time"
 
@@ -12,6 +11,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/lib/pq"
+	"github.com/rs/zerolog/log"
 )
 
 type createUserRequest struct {
@@ -53,11 +53,16 @@ func (server *Server) CreateUser(ctx *gin.Context) {
 	}
 
 	param := db.CreateUserParams{Username: req.Username, FullName: req.FullName, Email: req.Email, HashedPassword: hashedPass}
-	user, err := server.store.CreateUser(ctx, param)
+	txResult, err := server.store.CreateUserTx(ctx, db.CreateUserTxParam{
+		CreateUserParam: param,
+		AfterCreate: func(user db.User) error {
+			log.Info().Msgf("after create username: %s", user.Username)
+			return nil
+		},
+	})
 
 	if err != nil {
 		if pqErr, ok := err.(*pq.Error); ok {
-			fmt.Println("pq err = ", err)
 			switch pqErr.Code.Name() {
 			case "unique_violation":
 				ctx.JSON(http.StatusForbidden, errorResponse(err))
@@ -70,8 +75,7 @@ func (server *Server) CreateUser(ctx *gin.Context) {
 		return
 	}
 
-	resp := createUserResponse(user)
-	ctx.JSON(http.StatusOK, resp)
+	ctx.JSON(http.StatusOK, createUserResponse(txResult.User))
 }
 
 type UpdateUserRequest struct {
