@@ -27,6 +27,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.createAccountStmt, err = db.PrepareContext(ctx, createAccount); err != nil {
 		return nil, fmt.Errorf("error preparing query CreateAccount: %w", err)
 	}
+	if q.createEmailVerifyStmt, err = db.PrepareContext(ctx, createEmailVerify); err != nil {
+		return nil, fmt.Errorf("error preparing query CreateEmailVerify: %w", err)
+	}
 	if q.createEntryStmt, err = db.PrepareContext(ctx, createEntry); err != nil {
 		return nil, fmt.Errorf("error preparing query CreateEntry: %w", err)
 	}
@@ -47,6 +50,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	}
 	if q.getAccountForUpdateStmt, err = db.PrepareContext(ctx, getAccountForUpdate); err != nil {
 		return nil, fmt.Errorf("error preparing query GetAccountForUpdate: %w", err)
+	}
+	if q.getEmailVerifyStmt, err = db.PrepareContext(ctx, getEmailVerify); err != nil {
+		return nil, fmt.Errorf("error preparing query GetEmailVerify: %w", err)
 	}
 	if q.getEntryStmt, err = db.PrepareContext(ctx, getEntry); err != nil {
 		return nil, fmt.Errorf("error preparing query GetEntry: %w", err)
@@ -75,6 +81,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.updateAccountBalancePlusStmt, err = db.PrepareContext(ctx, updateAccountBalancePlus); err != nil {
 		return nil, fmt.Errorf("error preparing query UpdateAccountBalancePlus: %w", err)
 	}
+	if q.updateEmailVerifyStmt, err = db.PrepareContext(ctx, updateEmailVerify); err != nil {
+		return nil, fmt.Errorf("error preparing query UpdateEmailVerify: %w", err)
+	}
 	if q.updateUserStmt, err = db.PrepareContext(ctx, updateUser); err != nil {
 		return nil, fmt.Errorf("error preparing query UpdateUser: %w", err)
 	}
@@ -86,6 +95,11 @@ func (q *Queries) Close() error {
 	if q.createAccountStmt != nil {
 		if cerr := q.createAccountStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing createAccountStmt: %w", cerr)
+		}
+	}
+	if q.createEmailVerifyStmt != nil {
+		if cerr := q.createEmailVerifyStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing createEmailVerifyStmt: %w", cerr)
 		}
 	}
 	if q.createEntryStmt != nil {
@@ -121,6 +135,11 @@ func (q *Queries) Close() error {
 	if q.getAccountForUpdateStmt != nil {
 		if cerr := q.getAccountForUpdateStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing getAccountForUpdateStmt: %w", cerr)
+		}
+	}
+	if q.getEmailVerifyStmt != nil {
+		if cerr := q.getEmailVerifyStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getEmailVerifyStmt: %w", cerr)
 		}
 	}
 	if q.getEntryStmt != nil {
@@ -168,6 +187,11 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing updateAccountBalancePlusStmt: %w", cerr)
 		}
 	}
+	if q.updateEmailVerifyStmt != nil {
+		if cerr := q.updateEmailVerifyStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing updateEmailVerifyStmt: %w", cerr)
+		}
+	}
 	if q.updateUserStmt != nil {
 		if cerr := q.updateUserStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing updateUserStmt: %w", cerr)
@@ -213,6 +237,7 @@ type Queries struct {
 	db                            DBTX
 	tx                            *sql.Tx
 	createAccountStmt             *sql.Stmt
+	createEmailVerifyStmt         *sql.Stmt
 	createEntryStmt               *sql.Stmt
 	createSessionStmt             *sql.Stmt
 	createTransferStmt            *sql.Stmt
@@ -220,6 +245,7 @@ type Queries struct {
 	deleteAccountStmt             *sql.Stmt
 	getAccountStmt                *sql.Stmt
 	getAccountForUpdateStmt       *sql.Stmt
+	getEmailVerifyStmt            *sql.Stmt
 	getEntryStmt                  *sql.Stmt
 	getSessionStmt                *sql.Stmt
 	getTransferStmt               *sql.Stmt
@@ -229,6 +255,7 @@ type Queries struct {
 	updateAccountStmt             *sql.Stmt
 	updateAccountBalanceMinusStmt *sql.Stmt
 	updateAccountBalancePlusStmt  *sql.Stmt
+	updateEmailVerifyStmt         *sql.Stmt
 	updateUserStmt                *sql.Stmt
 }
 
@@ -237,6 +264,7 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		db:                            tx,
 		tx:                            tx,
 		createAccountStmt:             q.createAccountStmt,
+		createEmailVerifyStmt:         q.createEmailVerifyStmt,
 		createEntryStmt:               q.createEntryStmt,
 		createSessionStmt:             q.createSessionStmt,
 		createTransferStmt:            q.createTransferStmt,
@@ -244,6 +272,7 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		deleteAccountStmt:             q.deleteAccountStmt,
 		getAccountStmt:                q.getAccountStmt,
 		getAccountForUpdateStmt:       q.getAccountForUpdateStmt,
+		getEmailVerifyStmt:            q.getEmailVerifyStmt,
 		getEntryStmt:                  q.getEntryStmt,
 		getSessionStmt:                q.getSessionStmt,
 		getTransferStmt:               q.getTransferStmt,
@@ -253,6 +282,7 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		updateAccountStmt:             q.updateAccountStmt,
 		updateAccountBalanceMinusStmt: q.updateAccountBalanceMinusStmt,
 		updateAccountBalancePlusStmt:  q.updateAccountBalancePlusStmt,
+		updateEmailVerifyStmt:         q.updateEmailVerifyStmt,
 		updateUserStmt:                q.updateUserStmt,
 	}
 }

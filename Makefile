@@ -5,7 +5,7 @@ migratecreate:
 	migrate create -ext sql -dir db/migration -seq $(name)
 
 migrateup:
-	migrate -path db/migration -database  -verbose up
+	migrate -path db/migration -database $(DB_URL) -verbose up
 
 migrateup1:
 	migrate -path db/migration -database $(DB_URL) -verbose up 1

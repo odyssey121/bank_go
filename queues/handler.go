@@ -24,6 +24,7 @@ type TaskHandler interface {
 
 type RedisTaskHandler struct {
 	server     *asynq.Server
+	store      db.Store
 	mailSender mail.EmailSender
 }
 
@@ -51,7 +52,7 @@ func NewRedisTaskHandler(store db.Store, mailSender mail.EmailSender, redisAsynq
 		},
 	)
 
-	return &RedisTaskHandler{server: srv, mailSender: mailSender}
+	return &RedisTaskHandler{server: srv, store: store, mailSender: mailSender}
 
 }
 

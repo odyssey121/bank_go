@@ -5,6 +5,7 @@
 package db
 
 import (
+	"database/sql"
 	"time"
 
 	"github.com/google/uuid"
@@ -16,6 +17,16 @@ type Account struct {
 	Balance   int64     `json:"balance"`
 	Currency  string    `json:"currency"`
 	CreatedAt time.Time `json:"created_at"`
+}
+
+type EmailVerify struct {
+	ID         int64     `json:"id"`
+	Username   string    `json:"username"`
+	Email      string    `json:"email"`
+	Code       string    `json:"code"`
+	IsVerified bool      `json:"is_verified"`
+	CreatedAt  time.Time `json:"created_at"`
+	ExpiredAt  time.Time `json:"expired_at"`
 }
 
 type Entry struct {
@@ -47,10 +58,11 @@ type Transfer struct {
 }
 
 type User struct {
-	Username          string    `json:"username"`
-	HashedPassword    string    `json:"hashed_password"`
-	FullName          string    `json:"full_name"`
-	Email             string    `json:"email"`
-	PasswordChangedAt time.Time `json:"password_changed_at"`
-	CreatedAt         time.Time `json:"created_at"`
+	Username          string       `json:"username"`
+	HashedPassword    string       `json:"hashed_password"`
+	FullName          string       `json:"full_name"`
+	Email             string       `json:"email"`
+	PasswordChangedAt time.Time    `json:"password_changed_at"`
+	CreatedAt         time.Time    `json:"created_at"`
+	IsEmailVerify     sql.NullBool `json:"is_email_verify"`
 }

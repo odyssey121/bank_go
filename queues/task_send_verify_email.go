@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 
+	db "github.com/bank_go/db/sqlc"
+	"github.com/bank_go/util"
 	"github.com/hibiken/asynq"
 	"github.com/rs/zerolog/log"
 )
@@ -16,6 +18,7 @@ const (
 
 type EmailVerifyPayload struct {
 	Username string
+	FullName string
 	Email    string
 }
 
@@ -58,8 +61,31 @@ func (redisTaskHandler *RedisTaskHandler) handleEmailVerifyTask(ctx context.Cont
 	if err := json.Unmarshal(t.Payload(), &p); err != nil {
 		return fmt.Errorf("json.Unmarshal failed: %v: %w", err, asynq.SkipRetry)
 	}
-	log.Printf("Sending Verify Email to User: username=%s and email=%s", p.Username, p.Email)
+	// db logic
+	param := db.CreateEmailVerifyParams{Username: p.Username, Email: p.Email, Code: util.RandomString(32)}
+	emailVerify, err := redisTaskHandler.store.CreateEmailVerify(ctx, param)
+	if err != nil {
+		return err
+	}
 	// Email delivery code ...
-	// redisTaskHandler.mailSender.SendEmail()
+	subject := "Welcome to Bank"
+	// TODO: replace this URL with an environment variable that points to a front-end page
+	verifyUrl := fmt.Sprintf("http://localhost:8888/v1/verify-email?id=%d&code=%s",
+		emailVerify.ID, emailVerify.Code)
+
+	content := fmt.Sprintf(`Hello ,<br/>
+	Thank you for registering with us!<br/>
+	Please <a href="%s">click here</a> to verify your email address.<br/>
+	`, verifyUrl)
+	to := []string{p.Email}
+
+	err = redisTaskHandler.mailSender.SendEmail(subject, content, to, nil, nil, nil)
+	if err != nil {
+		return err
+	}
+
+	log.Info().Str("type", t.Type()).Bytes("payload", t.Payload()).
+		Str("email", p.Email).Msg("handled task")
+
 	return nil
 }

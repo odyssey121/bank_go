@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package pb;
+
+option go_package = "github.com/bank_go/pb_sources";
+
+message VerifyEmailRequest {
+    int64 id = 1;
+    string code = 2;
+}
+
+
+message VerifyEmailResponse {
+    bool is_verified = 1;
+}

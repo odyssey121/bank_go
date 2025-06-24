@@ -9,6 +9,7 @@ import (
 	"github.com/bank_go/util"
 	"github.com/hibiken/asynq"
 	"github.com/lib/pq"
+	"github.com/rs/zerolog/log"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -29,7 +30,12 @@ func (server *Server) CreateUser(ctx context.Context, req *pb_sources.CreateUser
 	resTx, err := server.store.CreateUserTx(ctx, db.CreateUserTxParam{
 		CreateUserParam: param,
 		AfterCreate: func(user db.User) error {
-			return server.qtProvider.ProvideEmailVerifyTask(ctx, &queues.EmailVerifyPayload{Username: user.Username, Email: user.Email}, asynq.Queue(queues.QueueCritical))
+			payload := &queues.EmailVerifyPayload{Username: user.Username, Email: user.Email, FullName: user.FullName}
+			err := server.qtProvider.ProvideEmailVerifyTask(ctx, payload, asynq.Queue(queues.QueueCritical))
+			if err != nil {
+				log.Error().Err(err).Msgf("failed to handle task <%s> with payload <%s>", queues.TypeSendVerifyEmail, payload)
+			}
+			return err
 		},
 	})
 

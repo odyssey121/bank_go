@@ -12,6 +12,7 @@ import (
 
 type Querier interface {
 	CreateAccount(ctx context.Context, arg CreateAccountParams) (Account, error)
+	CreateEmailVerify(ctx context.Context, arg CreateEmailVerifyParams) (EmailVerify, error)
 	CreateEntry(ctx context.Context, arg CreateEntryParams) (Entry, error)
 	CreateSession(ctx context.Context, arg CreateSessionParams) (Session, error)
 	CreateTransfer(ctx context.Context, arg CreateTransferParams) (Transfer, error)
@@ -19,6 +20,7 @@ type Querier interface {
 	DeleteAccount(ctx context.Context, id int64) (Account, error)
 	GetAccount(ctx context.Context, id int64) (Account, error)
 	GetAccountForUpdate(ctx context.Context, id int64) (Account, error)
+	GetEmailVerify(ctx context.Context, id int64) (EmailVerify, error)
 	GetEntry(ctx context.Context, id int64) (Entry, error)
 	GetSession(ctx context.Context, id uuid.UUID) (Session, error)
 	GetTransfer(ctx context.Context, id int64) (Transfer, error)
@@ -28,6 +30,7 @@ type Querier interface {
 	UpdateAccount(ctx context.Context, arg UpdateAccountParams) (Account, error)
 	UpdateAccountBalanceMinus(ctx context.Context, arg UpdateAccountBalanceMinusParams) (Account, error)
 	UpdateAccountBalancePlus(ctx context.Context, arg UpdateAccountBalancePlusParams) (Account, error)
+	UpdateEmailVerify(ctx context.Context, arg UpdateEmailVerifyParams) (EmailVerify, error)
 	UpdateUser(ctx context.Context, arg UpdateUserParams) (User, error)
 }
 
