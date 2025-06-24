@@ -58,7 +58,8 @@ func (redisTaskHandler *RedisTaskHandler) handleEmailVerifyTask(ctx context.Cont
 	if err := json.Unmarshal(t.Payload(), &p); err != nil {
 		return fmt.Errorf("json.Unmarshal failed: %v: %w", err, asynq.SkipRetry)
 	}
-	log.Printf("Sending Verify Email to User: username=%s", p.Username)
+	log.Printf("Sending Verify Email to User: username=%s and email=%s", p.Username, p.Email)
 	// Email delivery code ...
+	// redisTaskHandler.mailSender.SendEmail()
 	return nil
 }

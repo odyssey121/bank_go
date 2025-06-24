@@ -16,3 +16,7 @@ jwt_token_duration:
   15m
 jwt_refresh_token_duration:
   24h
+email_username:
+  ""
+email_passowrd:
+  ""

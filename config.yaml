@@ -16,3 +16,9 @@ jwt_token_duration:
   15m
 jwt_refresh_token_duration:
   24h
+email_name:
+  bank go
+email_username:
+  
+email_password:
+  

@@ -17,6 +17,9 @@ type Config struct {
 	JWtRefreshTokenDuration time.Duration `mapstructure:"jwt_refresh_token_duration"`
 	GrpcServerAddress       string        `mapstructure:"grpc_server_address"`
 	RedisServerAddress      string        `mapstructure:"redis_server_address"`
+	EmailName               string        `mapstructure:"email_name"`
+	EmailUsername           string        `mapstructure:"email_username"`
+	EmailPassword           string        `mapstructure:"email_password"`
 }
 
 func LoadConfig(configPath string) (Config, error) {

@@ -2,7 +2,7 @@ DB_URL="postgresql://username:pass@localhost:5432/bank_go?sslmode=disable"
 
 
 migratecreate:
-	migrate create -dir db/migration -ext sql -seq 6 $(name)
+	migrate create -ext sql -dir db/migration -seq $(name)
 
 migrateup:
 	migrate -path db/migration -database  -verbose up
@@ -20,7 +20,7 @@ clear:
 	clear
 
 test:
-	go test -v -cover ./...
+	go test -v -cover --short ./...
 
 sqlc:
 	sqlc generate

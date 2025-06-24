@@ -13,6 +13,7 @@ import (
 	"github.com/bank_go/api"
 	db "github.com/bank_go/db/sqlc"
 	"github.com/bank_go/gapi"
+	"github.com/bank_go/mail"
 	pb_sources "github.com/bank_go/pb"
 	"github.com/bank_go/queues"
 	"github.com/bank_go/util"
@@ -63,7 +64,7 @@ func main() {
 
 	runGrpcServer(ctx, waitGroup, store, cfg, qtProvider)
 	runGrpcGatewayServer(ctx, waitGroup, cfg, store, qtProvider)
-	runAsyncQServer(ctx, waitGroup, store, redisOpt)
+	runAsyncQServer(ctx, waitGroup, store, cfg, redisOpt)
 
 	err = waitGroup.Wait()
 	if err != nil {
@@ -71,8 +72,10 @@ func main() {
 	}
 }
 
-func runAsyncQServer(ctx context.Context, wg *errgroup.Group, store db.Store, opt asynq.RedisClientOpt) {
-	queueHandler := queues.NewRedisTaskHandler(store, opt)
+func runAsyncQServer(ctx context.Context, wg *errgroup.Group, store db.Store, cfg util.Config, opt asynq.RedisClientOpt) {
+	// init mail sender
+	mailSender := mail.NewGmailSender(cfg.EmailName, cfg.EmailUsername, cfg.EmailPassword)
+	queueHandler := queues.NewRedisTaskHandler(store, mailSender, opt)
 
 	wg.Go(func() error {
 		err := queueHandler.Start()
