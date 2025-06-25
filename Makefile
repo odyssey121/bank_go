@@ -28,8 +28,11 @@ sqlc:
 server:
 	nodemon --exec go run main.go --ext go --signal SIGTERM
 
-mock:
+mock_db:
 	mockgen -destination db/mock/store.go -package mockdb github.com/bank_go/db/sqlc Store
+
+mock_qt:
+	mockgen -destination queues/mock/qt_provider.go -package mockqt github.com/bank_go/queues TaskProvider
 
 proto:
 	rm -fv pb/*.go
@@ -42,4 +45,4 @@ evans:
 	evans -r repl --host localhost --port 9090
 
 # not file in dir
-.PHONY: clear migrateup migratedown test server sqlc mock migrateup1 proto evans
+.PHONY: clear migrateup migratedown test server sqlc mock_db migrateup1 proto evans mock_qt
