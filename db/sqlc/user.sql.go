@@ -18,7 +18,7 @@ INSERT INTO users (
   hashed_password
 ) VALUES (
   $1, $2, $3, $4
-) RETURNING username, hashed_password, full_name, email, password_changed_at, created_at, is_email_verify
+) RETURNING username, hashed_password, full_name, email, password_changed_at, created_at, is_email_verified
 `
 
 type CreateUserParams struct {
@@ -43,13 +43,13 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		&i.Email,
 		&i.PasswordChangedAt,
 		&i.CreatedAt,
-		&i.IsEmailVerify,
+		&i.IsEmailVerified,
 	)
 	return i, err
 }
 
 const getUser = `-- name: GetUser :one
-SELECT username, hashed_password, full_name, email, password_changed_at, created_at, is_email_verify FROM users WHERE username = $1 LIMIT 1
+SELECT username, hashed_password, full_name, email, password_changed_at, created_at, is_email_verified FROM users WHERE username = $1 LIMIT 1
 `
 
 func (q *Queries) GetUser(ctx context.Context, username string) (User, error) {
@@ -62,7 +62,7 @@ func (q *Queries) GetUser(ctx context.Context, username string) (User, error) {
 		&i.Email,
 		&i.PasswordChangedAt,
 		&i.CreatedAt,
-		&i.IsEmailVerify,
+		&i.IsEmailVerified,
 	)
 	return i, err
 }
@@ -73,9 +73,9 @@ UPDATE users SET
   full_name = COALESCE($2, full_name),
   email = COALESCE($3, email),
   password_changed_at = COALESCE($4, password_changed_at),
-  is_email_verify = COALESCE($5, is_email_verify)
+  is_email_verified = COALESCE($5, is_email_verified)
 WHERE username = $6
-RETURNING username, hashed_password, full_name, email, password_changed_at, created_at, is_email_verify
+RETURNING username, hashed_password, full_name, email, password_changed_at, created_at, is_email_verified
 `
 
 type UpdateUserParams struct {
@@ -83,7 +83,7 @@ type UpdateUserParams struct {
 	FullName          sql.NullString `json:"full_name"`
 	Email             sql.NullString `json:"email"`
 	PasswordChangedAt sql.NullTime   `json:"password_changed_at"`
-	IsEmailVerify     sql.NullBool   `json:"is_email_verify"`
+	IsEmailVerified   sql.NullBool   `json:"is_email_verified"`
 	Username          string         `json:"username"`
 }
 
@@ -93,7 +93,7 @@ func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (User, e
 		arg.FullName,
 		arg.Email,
 		arg.PasswordChangedAt,
-		arg.IsEmailVerify,
+		arg.IsEmailVerified,
 		arg.Username,
 	)
 	var i User
@@ -104,7 +104,7 @@ func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (User, e
 		&i.Email,
 		&i.PasswordChangedAt,
 		&i.CreatedAt,
-		&i.IsEmailVerify,
+		&i.IsEmailVerified,
 	)
 	return i, err
 }

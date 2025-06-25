@@ -10,8 +10,11 @@ INSERT INTO email_verify (
 
 -- name: UpdateEmailVerify :one
 UPDATE email_verify SET 
-  is_verified = COALESCE(sqlc.narg(is_verified), is_verified)
-WHERE id = $1
+  is_verified = TRUE
+WHERE id = @id
+ and code = @code
+ and expired_at > now()
+ and is_verified = FALSE
 RETURNING *;
 
 -- name: GetEmailVerify :one

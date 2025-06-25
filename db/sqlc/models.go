@@ -64,5 +64,5 @@ type User struct {
 	Email             string       `json:"email"`
 	PasswordChangedAt time.Time    `json:"password_changed_at"`
 	CreatedAt         time.Time    `json:"created_at"`
-	IsEmailVerify     sql.NullBool `json:"is_email_verify"`
+	IsEmailVerified   sql.NullBool `json:"is_email_verified"`
 }

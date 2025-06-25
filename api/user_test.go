@@ -22,31 +22,31 @@ import (
 )
 
 type userParamEqMatcher struct {
-	arg      db.CreateUserTxParam
+	arg      db.CreateUserParams
 	password string
 }
 
 func (e userParamEqMatcher) Matches(x interface{}) bool {
-	arg, ok := x.(db.CreateUserTxParam)
+	arg, ok := x.(db.CreateUserParams)
 	if !ok {
 		return false
 	}
 
-	err := util.CheckPasswordHash(e.password, arg.CreateUserParam.HashedPassword)
+	err := util.CheckPasswordHash(e.password, arg.HashedPassword)
 	if err != nil {
 		return false
 	}
 
-	e.arg.CreateUserParam.HashedPassword = arg.CreateUserParam.HashedPassword
+	e.arg.HashedPassword = arg.HashedPassword
 
-	return reflect.DeepEqual(e.arg.CreateUserParam, arg.CreateUserParam)
+	return reflect.DeepEqual(e.arg, arg)
 }
 
 func (e userParamEqMatcher) String() string {
 	return fmt.Sprintf("is equal to %v (%T)", e.arg, e.arg)
 }
 
-func eqCreateUserParam(arg db.CreateUserTxParam, password string) gomock.Matcher {
+func eqCreateUserParam(arg db.CreateUserParams, password string) gomock.Matcher {
 	return userParamEqMatcher{arg, password}
 }
 
@@ -86,8 +86,7 @@ func TestCreateUserApi(t *testing.T) {
 			},
 			buildStubs: func(store *mockdb.MockStore) {
 				param := db.CreateUserParams{Username: user.Username, FullName: user.FullName, Email: user.Email, HashedPassword: user.HashedPassword}
-				txParam := db.CreateUserTxParam{CreateUserParam: param, AfterCreate: func(user db.User) error { return nil }}
-				store.EXPECT().CreateUserTx(gomock.Any(), eqCreateUserParam(txParam, password)).Times(1).Return(db.CreateUserTxResult{User: user}, nil)
+				store.EXPECT().CreateUser(gomock.Any(), eqCreateUserParam(param, password)).Times(1).Return(user, nil)
 			},
 			checkResp: func(t *testing.T, recorder *httptest.ResponseRecorder) {
 				var respUser userResponse

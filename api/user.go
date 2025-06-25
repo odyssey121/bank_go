@@ -11,7 +11,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/lib/pq"
-	"github.com/rs/zerolog/log"
 )
 
 type createUserRequest struct {
@@ -52,14 +51,7 @@ func (server *Server) CreateUser(ctx *gin.Context) {
 		return
 	}
 
-	param := db.CreateUserParams{Username: req.Username, FullName: req.FullName, Email: req.Email, HashedPassword: hashedPass}
-	txResult, err := server.store.CreateUserTx(ctx, db.CreateUserTxParam{
-		CreateUserParam: param,
-		AfterCreate: func(user db.User) error {
-			log.Info().Msgf("after create username: %s", user.Username)
-			return nil
-		},
-	})
+	user, err := server.store.CreateUser(ctx, db.CreateUserParams{Username: req.Username, FullName: req.FullName, Email: req.Email, HashedPassword: hashedPass})
 
 	if err != nil {
 		if pqErr, ok := err.(*pq.Error); ok {
@@ -75,7 +67,7 @@ func (server *Server) CreateUser(ctx *gin.Context) {
 		return
 	}
 
-	ctx.JSON(http.StatusOK, createUserResponse(txResult.User))
+	ctx.JSON(http.StatusOK, createUserResponse(user))
 }
 
 type UpdateUserRequest struct {

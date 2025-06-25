@@ -7,7 +7,6 @@ package db
 
 import (
 	"context"
-	"database/sql"
 )
 
 const createEmailVerify = `-- name: CreateEmailVerify :one
@@ -62,18 +61,21 @@ func (q *Queries) GetEmailVerify(ctx context.Context, id int64) (EmailVerify, er
 
 const updateEmailVerify = `-- name: UpdateEmailVerify :one
 UPDATE email_verify SET 
-  is_verified = COALESCE($2, is_verified)
+  is_verified = TRUE
 WHERE id = $1
+ and code = $2
+ and expired_at > now()
+ and is_verified = FALSE
 RETURNING id, username, email, code, is_verified, created_at, expired_at
 `
 
 type UpdateEmailVerifyParams struct {
-	ID         int64        `json:"id"`
-	IsVerified sql.NullBool `json:"is_verified"`
+	ID   int64  `json:"id"`
+	Code string `json:"code"`
 }
 
 func (q *Queries) UpdateEmailVerify(ctx context.Context, arg UpdateEmailVerifyParams) (EmailVerify, error) {
-	row := q.queryRow(ctx, q.updateEmailVerifyStmt, updateEmailVerify, arg.ID, arg.IsVerified)
+	row := q.queryRow(ctx, q.updateEmailVerifyStmt, updateEmailVerify, arg.ID, arg.Code)
 	var i EmailVerify
 	err := row.Scan(
 		&i.ID,

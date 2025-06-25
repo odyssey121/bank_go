@@ -26,9 +26,8 @@ func (server *Server) CreateUser(ctx context.Context, req *pb_sources.CreateUser
 		return nil, status.Errorf(codes.Internal, "failed to hash password")
 	}
 
-	param := db.CreateUserParams{Username: req.GetUsername(), FullName: req.GetFullName(), Email: req.GetEmail(), HashedPassword: hashedPass}
 	resTx, err := server.store.CreateUserTx(ctx, db.CreateUserTxParam{
-		CreateUserParam: param,
+		CreateUserParams: db.CreateUserParams{Username: req.GetUsername(), FullName: req.GetFullName(), Email: req.GetEmail(), HashedPassword: hashedPass},
 		AfterCreate: func(user db.User) error {
 			payload := &queues.EmailVerifyPayload{Username: user.Username, Email: user.Email, FullName: user.FullName}
 			err := server.qtProvider.ProvideEmailVerifyTask(ctx, payload, asynq.Queue(queues.QueueCritical))

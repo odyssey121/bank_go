@@ -9,6 +9,6 @@ CREATE TABLE "email_verify" (
 );
 
 ALTER TABLE "users"
-ADD COLUMN IF NOT EXISTS is_email_verify boolean DEFAULT false;
+ADD COLUMN IF NOT EXISTS is_email_verified boolean DEFAULT false;
 
 ALTER TABLE "email_verify" ADD FOREIGN KEY ("username") REFERENCES "users" ("username");
