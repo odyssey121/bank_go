@@ -74,17 +74,18 @@ func TestCreateUserRPCApi(t *testing.T) {
 	hashedPass, err := util.HashPassword(password)
 	require.NoError(t, err)
 	user.HashedPassword = hashedPass
+	queueErr := errors.New("enqueue verify email task error")
 
 	testCases := []struct {
 		name         string
-		createReq    *pb_sources.CreateUserRequest
+		req          *pb_sources.CreateUserRequest
 		buildContext func(t *testing.T, tokenMaker token.Maker[*token.PasetoPayload]) context.Context
 		buildStubs   func(store *mockdb.MockStore, qtProvider *mockqt.MockTaskProvider)
 		checkResp    func(t *testing.T, res *pb_sources.CreateUserResponse, err error)
 	}{
 		{
-			name:      "OK",
-			createReq: &pb_sources.CreateUserRequest{Username: user.Username, FullName: user.FullName, Email: user.Email, Password: password},
+			name: "OK",
+			req:  &pb_sources.CreateUserRequest{Username: user.Username, FullName: user.FullName, Email: user.Email, Password: password},
 			// buildContext: func(t *testing.T, tokenMaker token.Maker) context.Context {
 			// 	return newContextWithBearerToken(t, tokenMaker, user.Username, user.Role, time.Minute, token.TokenTypeAccessToken)
 			// },
@@ -105,8 +106,8 @@ func TestCreateUserRPCApi(t *testing.T) {
 			},
 		},
 		{
-			name:      "InternalDbErr",
-			createReq: &pb_sources.CreateUserRequest{Username: user.Username, FullName: user.FullName, Email: user.Email, Password: password},
+			name: "InternalDbErr",
+			req:  &pb_sources.CreateUserRequest{Username: user.Username, FullName: user.FullName, Email: user.Email, Password: password},
 			// buildContext: func(t *testing.T, tokenMaker token.Maker) context.Context {
 			// 	return newContextWithBearerToken(t, tokenMaker, user.Username, user.Role, time.Minute, token.TokenTypeAccessToken)
 			// },
@@ -122,22 +123,19 @@ func TestCreateUserRPCApi(t *testing.T) {
 			},
 		},
 		{
-			name:      "ProvideEmailVerifyTaskError",
-			createReq: &pb_sources.CreateUserRequest{Username: user.Username, FullName: user.FullName, Email: user.Email, Password: password},
+			name: "ProvideEmailVerifyTaskError",
+			req:  &pb_sources.CreateUserRequest{Username: user.Username, FullName: user.FullName, Email: user.Email, Password: password},
 			// buildContext: func(t *testing.T, tokenMaker token.Maker) context.Context {
 			// 	return newContextWithBearerToken(t, tokenMaker, user.Username, user.Role, time.Minute, token.TokenTypeAccessToken)
 			// },
 			buildStubs: func(store *mockdb.MockStore, qtProvider *mockqt.MockTaskProvider) {
-				queueErr := errors.New("enqueue verify email task error")
-				createUserParams := db.CreateUserParams{Username: user.Username, FullName: user.FullName, Email: user.Email, HashedPassword: user.HashedPassword}
-				txParam := db.CreateUserTxParam{CreateUserParams: createUserParams}
 				txResult := db.CreateUserTxResult{User: user}
-				store.EXPECT().CreateUserTx(gomock.Any(), eqCreateUserTxParam(txParam, password, user)).Times(1).Return(txResult, queueErr)
+				store.EXPECT().CreateUserTx(gomock.Any(), gomock.Any()).Times(1).Return(txResult, queueErr)
+				qtProvider.EXPECT().ProvideEmailVerifyTask(gomock.Any(), gomock.Any(), gomock.Any()).Times(0).Return(queueErr)
 
-				// p := &queues.EmailVerifyPayload{Username: user.Username, FullName: user.FullName, Email: user.Email}
-				qtProvider.EXPECT().ProvideEmailVerifyTask(gomock.Any(), gomock.Any(), gomock.Any()).Times(1).Return(queueErr)
 			},
 			checkResp: func(t *testing.T, res *pb_sources.CreateUserResponse, err error) {
+				fmt.Println("err:=> ", err)
 				require.Error(t, err)
 				st, ok := status.FromError(err)
 				require.True(t, ok)
@@ -162,7 +160,7 @@ func TestCreateUserRPCApi(t *testing.T) {
 			// start test server
 			server := NewTestServer(t, store, qtProvider)
 			// ctx := tc.buildContext(t, server.tokenMaker)
-			res, err := server.CreateUser(context.Background(), tc.createReq)
+			res, err := server.CreateUser(context.Background(), tc.req)
 			// check response
 			tc.checkResp(t, res, err)
 

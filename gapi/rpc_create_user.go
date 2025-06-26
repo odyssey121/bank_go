@@ -2,7 +2,6 @@ package gapi
 
 import (
 	"context"
-	"fmt"
 
 	db "github.com/bank_go/db/sqlc"
 	pb_sources "github.com/bank_go/pb"
@@ -30,7 +29,6 @@ func (server *Server) CreateUser(ctx context.Context, req *pb_sources.CreateUser
 	resTx, err := server.store.CreateUserTx(ctx, db.CreateUserTxParam{
 		CreateUserParams: db.CreateUserParams{Username: req.GetUsername(), FullName: req.GetFullName(), Email: req.GetEmail(), HashedPassword: hashedPass},
 		AfterCreate: func(user db.User) error {
-			fmt.Println("AfterCreate: ", user)
 			payload := &queues.EmailVerifyPayload{Username: user.Username, Email: user.Email, FullName: user.FullName}
 			err := server.qtProvider.ProvideEmailVerifyTask(ctx, payload, asynq.Queue(queues.QueueCritical))
 			if err != nil {
